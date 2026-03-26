@@ -2,12 +2,23 @@
 
 Generic, reusable CD pipeline for delivering iOS apps to App Store Connect. Works with **any `.xcodeproj`** project and **any AI coding agent** (Claude Code, Codex, OpenCode) or directly from the terminal.
 
+## No third-party tools. No API keys. Just your Xcode account.
+
+Unlike fastlane, Bitrise, or other CI/CD tools, `deliver-appstore` requires **zero configuration** beyond what you already have:
+
+- No App Store Connect API keys to generate or store
+- No certificates to export or manage
+- No provisioning profiles to download
+- No `.env` files or secrets
+
+It uses `xcodebuild` directly — the same tool Xcode uses internally — and authenticates with the Apple Developer account you're already signed into in Xcode. If you can archive and upload manually from Xcode, this tool works out of the box.
+
 ## Features
 
 - **Auto-detection**: Automatically detects Xcode project, scheme, team ID, version source, and current version/build
 - **Git-flow**: Manages branching (`develop` -> `release/X.X.X` -> `main`), tagging, and cleanup
 - **Version bumping**: Supports both `.xcconfig` and `project.pbxproj` version sources
-- **Build & Upload**: Archives, signs, and uploads directly to App Store Connect via Xcode credentials
+- **Build & Upload**: Archives, signs, and uploads directly to App Store Connect via `xcodebuild` — no API keys needed
 - **GitHub integration**: Creates PRs and GitHub Releases via `gh` CLI
 - **Agent-agnostic**: Shell scripts as core logic + wrappers for Claude Code, Codex, and OpenCode
 
