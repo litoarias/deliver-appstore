@@ -42,47 +42,82 @@ Add `bin/` to your PATH or run scripts directly:
 /path/to/deliver-appstore/bin/deliver-appstore.sh
 ```
 
-## Usage
+## Workflow
 
-### Phase 1: Build & Upload (`deliver-appstore`)
+The release process is split into two phases that match how the App Store review cycle actually works: you submit first, wait for approval, then finalize. Between those two phases you can keep working normally on `develop`.
 
-Run from your iOS project directory:
+```
+[feature/*] ──merge──> [develop] ──branch──> [release/X.X.X] ──────────────────────> PR ──> [main]
+                                                    │                                              │
+                                              bump version                                    tag X.X.X
+                                              archive + upload                                     │
+                                              App Store review...                         [develop] <──merge──┘
+                                                    │
+                                            /deliver-appstore-complete
+```
+
+### Phase 1 — Build & Upload (`/deliver-appstore`)
+
+Run this from your iOS project directory, **from any branch** (feature branch, develop, or directly from develop).
+
+**What happens step by step:**
+
+1. **Pre-flight**: verifies git is clean, finds the `.xcodeproj`, detects scheme and Team ID automatically
+2. **Parameters**: asks for the new version (e.g. `1.4.0`) and build number (auto-suggests current + 1)
+3. **Branch management** — three scenarios handled automatically:
+   - If you're on a **feature branch**: offers to merge it into `develop` first, then creates the release branch
+   - If you're already on **develop**: pulls latest and branches from there
+   - If you're anywhere else: checks out `develop`, pulls, and branches from there
+4. **Version bump**: updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in your xcconfig or `project.pbxproj`, commits the change
+5. **Resolve dependencies**: runs `xcodebuild -resolvePackageDependencies` to sync SPM packages
+6. **Archive**: runs `xcodebuild clean archive` in Release configuration with automatic signing
+7. **Upload**: exports the archive and uploads directly to App Store Connect using your Xcode credentials (no API keys needed)
+8. **PR**: pushes `release/X.X.X` and opens a pull request to `main` via `gh`
+
+At this point you wait for App Store review. You can keep working on `develop` as normal.
+
+### Phase 2 — Post-Approval (`/deliver-appstore-complete`)
+
+Run this **after Apple approves your app**. It auto-detects the release branch (or asks if multiple exist).
+
+**What happens step by step:**
+
+1. **Detect version**: reads from current branch name (`release/X.X.X`), or lists available release branches if needed
+2. **Merge release → main**: `git merge --no-ff` to preserve merge history, then pushes
+3. **Tag**: creates an annotated tag `X.X.X` on `main` and pushes it
+4. **Sync back**: merges `main` into `develop` so develop stays up to date with any release-time changes
+5. **Cleanup**: deletes `release/X.X.X` both locally and on origin
+6. **GitHub Release** (optional): creates a GitHub Release linked to the tag
+
+### Usage from Claude Code
+
+```
+/deliver-appstore
+```
+
+Claude guides you through the whole Phase 1 interactively — detects your project, asks only what it needs (version, build), and runs every step. At the end it tells you to wait for App Store approval.
+
+```
+/deliver-appstore-complete
+```
+
+Run this after approval. Claude finalizes the git-flow cycle, creates the tag, syncs branches, and optionally creates the GitHub Release.
+
+### Usage from the terminal
 
 ```bash
-# Interactive mode
+# Phase 1 — interactive
 deliver-appstore.sh
 
-# Non-interactive mode (for CI)
+# Phase 1 — non-interactive (CI)
 deliver-appstore.sh --version 1.2.0 --build 3 --scheme MyApp --no-confirm
-```
 
-**What it does:**
-1. Detects your Xcode project settings automatically
-2. Asks for version and build number
-3. Merges feature branch into `develop` (if applicable)
-4. Creates `release/X.X.X` branch
-5. Bumps version and build number
-6. Archives and uploads to App Store Connect
-7. Pushes release branch and creates a PR to `main`
-
-### Phase 2: Post-Approval (`deliver-appstore-complete`)
-
-Run after your app has been approved on the App Store:
-
-```bash
-# Interactive mode (auto-detects release branch)
+# Phase 2 — interactive (auto-detects release branch)
 deliver-appstore-complete.sh
 
-# Non-interactive mode
+# Phase 2 — non-interactive
 deliver-appstore-complete.sh --version 1.2.0 --no-confirm --github-release
 ```
-
-**What it does:**
-1. Merges `release/X.X.X` into `main`
-2. Creates git tag `X.X.X` on `main`
-3. Merges `main` back into `develop`
-4. Removes the release branch
-5. Optionally creates a GitHub Release
 
 ## Options
 
@@ -103,6 +138,15 @@ deliver-appstore-complete.sh --version 1.2.0 --no-confirm --github-release
 | `--no-confirm` | Skip all confirmation prompts |
 | `--github-release` | Create GitHub Release automatically |
 
+## How Version Detection Works
+
+The tool checks for version numbers in this order:
+
+1. **`.xcconfig` files**: If any `.xcconfig` in the project contains `MARKETING_VERSION`, it uses that file
+2. **`project.pbxproj`**: Falls back to reading `MARKETING_VERSION` from the Xcode project file
+
+This supports both xcconfig-based setups (common in modular projects) and standard Xcode project configurations.
+
 ## Project Structure
 
 ```
@@ -119,25 +163,6 @@ deliver-appstore/
 ├── claude-code/                       # Claude Code skill wrappers
 ├── codex/                             # Codex agent instructions
 └── opencode/                          # OpenCode agent instructions
-```
-
-## How Version Detection Works
-
-The tool checks for version numbers in this order:
-
-1. **`.xcconfig` files**: If any `.xcconfig` in the project contains `MARKETING_VERSION`, it uses that file
-2. **`project.pbxproj`**: Falls back to reading `MARKETING_VERSION` from the Xcode project file
-
-This supports both xcconfig-based setups (common in modular projects) and standard Xcode project configurations.
-
-## Git Flow
-
-```
-feature/* ──merge──> develop ──branch──> release/X.X.X ──PR──> main
-                                                                  │
-                         develop <──merge── main <──merge─────────┘
-                                             │
-                                          tag X.X.X
 ```
 
 ## License
