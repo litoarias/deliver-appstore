@@ -70,3 +70,26 @@ If you cannot run the scripts directly, follow the steps documented in the scrip
 2. Tag `<version>` on main, push tag
 3. Merge `main` into `develop`, push
 4. Delete `release/<version>` branch
+
+### `deliver-testflight` — TestFlight Upload
+
+Run from an iOS project directory (containing a `.xcodeproj`):
+
+```bash
+/path/to/deliver-appstore/bin/deliver-testflight.sh
+```
+
+**What it does:**
+1. Auto-detects Xcode project, scheme, team ID, current version, and build number
+2. Archives the app with `xcodebuild`
+3. Exports and uploads to App Store Connect (TestFlight)
+
+**No git operations** — does not commit, branch, tag, or push. Just builds and uploads the current state.
+
+### Manual Execution Steps (TestFlight)
+
+1. Detect project: `find . -maxdepth 1 -name "*.xcodeproj"`
+2. List schemes: `xcodebuild -list -project <project>`
+3. Detect team: `grep DEVELOPMENT_TEAM <project>/project.pbxproj`
+4. Archive: `xcodebuild clean archive -scheme <scheme> -configuration Release ...`
+5. Export+Upload: `xcodebuild -exportArchive` with `destination=upload`

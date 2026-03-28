@@ -42,6 +42,8 @@ git clone https://github.com/litoarias/deliver-appstore.git
 
 ## Workflow
 
+### App Store Release
+
 The release is split in two phases that match the App Store review cycle. Between them you keep working on `develop` as normal.
 
 ```
@@ -52,6 +54,14 @@ The release is split in two phases that match the App Store review cycle. Betwee
                                App Store review...    [develop] <── merge
                                      │
                           /deliver-appstore-complete
+```
+
+### TestFlight Upload
+
+A lightweight pipeline that archives and uploads the current project state to TestFlight. No branching, no version bumping, no git operations.
+
+```
+[any branch] ──> archive ──> upload ──> TestFlight
 ```
 
 ### Phase 1 — Build & Upload
@@ -104,6 +114,11 @@ Claude detects your project, asks only for version and build number, and runs th
 ```
 Run after approval. Claude finalizes the git-flow cycle, tags, syncs branches, and optionally creates the GitHub Release.
 
+```
+/deliver-testflight
+```
+Archives and uploads the current project state to TestFlight. No git operations — just build and upload.
+
 **Terminal**
 ```bash
 # Phase 1
@@ -113,6 +128,9 @@ deliver-appstore.sh --version 1.2.0 --build 3 --scheme MyApp --no-confirm
 # Phase 2
 deliver-appstore-complete.sh
 deliver-appstore-complete.sh --version 1.2.0 --no-confirm --github-release
+
+# TestFlight
+deliver-testflight.sh
 ```
 
 **Options**
